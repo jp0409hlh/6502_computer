@@ -1,0 +1,6 @@
+.include "mem.inc"
+.include "bootloader.s"
+.include "bios.s"
+.include "kernel.s"
+.include "shell.s"
+.include "font.inc"
