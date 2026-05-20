@@ -1,2 +1,2 @@
-#JP6502 computer
+# JP6502 computer
 Warning: This repo is still early in development
