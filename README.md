@@ -2,6 +2,18 @@
 
 Warning: This repo is still early in development
 
+## Hardware
+**Warning** : This section is still under development, do not expect anything to work.
+This folder contains the schematics and pcb files for this project.
+### main_computer
+This folder constains the schematics and pcb files for the JP6502 motherboard.
+### others
+Future plans : Floppy disk controller expansion card, SD card interface expansion card, ESP32 network expansion card.
+
+## Software
+**Warning** : This section is still under development, do not expect anything to work.
+This folder contains softwares I wrote for this computer, mainly the OS.
+
 ## Credits
 
 + [Ben eater](http://www.youtube.com/@BenEater) - for the 6502 Youtube series
