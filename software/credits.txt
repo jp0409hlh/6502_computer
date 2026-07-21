@@ -1,0 +1,2 @@
+String comparison : https://6502.org/source/strings/comparisons.html
+kernel inspiration : https://www.youtube.com/@biggertigger

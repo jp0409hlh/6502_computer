@@ -4179,6 +4179,12 @@
 		(uuid "579a4ea7-ea85-4e42-80fd-862f0e96247a")
 	)
 	(junction
+		(at 72.39 163.83)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "6227d640-fa39-4c1c-a1cd-3059ff57d27f")
+	)
+	(junction
 		(at 74.93 54.61)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -4249,12 +4255,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "e380e3ed-b0e8-4c4b-8042-80dc543d8588")
-	)
-	(junction
-		(at 72.39 163.83)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "e78bda2f-9369-485e-9bcf-c1e03749c8be")
 	)
 	(junction
 		(at 184.15 49.53)
@@ -5506,6 +5506,16 @@
 	)
 	(wire
 		(pts
+			(xy 72.39 163.83) (xy 87.63 163.83)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1a18b893-624f-41d4-91f9-7dc1b0d49db4")
+	)
+	(wire
+		(pts
 			(xy 160.02 92.71) (xy 166.37 92.71)
 		)
 		(stroke
@@ -5916,6 +5926,16 @@
 	)
 	(wire
 		(pts
+			(xy 80.01 158.75) (xy 87.63 158.75)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4d3c170a-1cc8-49fd-8388-300beebf32a7")
+	)
+	(wire
+		(pts
 			(xy 167.64 69.85) (xy 167.64 67.31)
 		)
 		(stroke
@@ -6043,16 +6063,6 @@
 			(type default)
 		)
 		(uuid "57f38a9c-a714-4ad7-b030-af55eb4d3d90")
-	)
-	(wire
-		(pts
-			(xy 72.39 163.83) (xy 87.63 163.83)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "581c4af7-0acf-4b90-a5a9-4b55b85f5109")
 	)
 	(bus
 		(pts
@@ -6673,16 +6683,6 @@
 			(type default)
 		)
 		(uuid "8ffced4e-5923-4ad5-9e99-d9b3f734ac8d")
-	)
-	(wire
-		(pts
-			(xy 80.01 158.75) (xy 87.63 158.75)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "901ac7f6-8404-458e-8044-38d18e194426")
 	)
 	(bus
 		(pts
@@ -12599,16 +12599,16 @@
 	)
 	(symbol
 		(lib_id "RCJ-045:RCJ-045")
-		(at 92.71 161.29 180)
+		(at 92.71 161.29 0)
+		(mirror y)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "da8bb2bc-2a6c-47a7-a866-365f9a73ea53")
 		(property "Reference" "J5"
-			(at 100.33 160.0199 0)
+			(at 100.33 162.5601 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12617,7 +12617,7 @@
 			)
 		)
 		(property "Value" "RCJ-045"
-			(at 100.33 162.5599 0)
+			(at 100.33 160.0201 0)
 			(effects
 				(font
 					(size 1.27 1.27)

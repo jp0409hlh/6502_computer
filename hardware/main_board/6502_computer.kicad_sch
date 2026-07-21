@@ -12625,6 +12625,18 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "!!!!!!!!!CS2B!!!!!!!!"
+		(exclude_from_sim no)
+		(at 381.254 186.182 0)
+		(effects
+			(font
+				(size 2.54 2.54)
+				(thickness 0.254)
+				(bold yes)
+			)
+		)
+		(uuid "5023c5c8-f1dc-48ca-9613-bb1e743ad0b3")
+	)
 	(text "UART"
 		(exclude_from_sim no)
 		(at 286.004 33.528 0)
@@ -12657,13 +12669,25 @@
 	)
 	(text "Keyboard \nlogic"
 		(exclude_from_sim no)
-		(at 281.94 214.376 0)
+		(at 284.226 217.17 0)
 		(effects
 			(font
 				(size 2.54 2.54)
 			)
 		)
 		(uuid "b631802a-61ce-4e94-b381-7fa6f755a1cd")
+	)
+	(text "!!!!!!!!!RESB!!!!!!!!"
+		(exclude_from_sim no)
+		(at 345.44 46.228 0)
+		(effects
+			(font
+				(size 2.54 2.54)
+				(thickness 0.254)
+				(bold yes)
+			)
+		)
+		(uuid "c75320fb-dfec-4d76-bf5e-7b358707c981")
 	)
 	(text "Peripheral\ndecoding logic"
 		(exclude_from_sim no)
@@ -28591,7 +28615,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Connector_Dsub:DSUB-9_Pins_Horizontal_P2.77x2.84mm_EdgePinOffset7.70mm_Housed_MountingHolesOffset9.12mm"
+		(property "Footprint" "Connector_Dsub:DSUB-9_Socket_Horizontal_P2.77x2.84mm_EdgePinOffset7.70mm_Housed_MountingHolesOffset9.12mm"
 			(at 273.05 20.32 0)
 			(effects
 				(font

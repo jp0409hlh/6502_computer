@@ -44,34 +44,48 @@ H     = $29                            ; Hex value parsing High
 YSAV  = $2A                            ; Used to see if hex value is given
 MODE  = $2B                            ; $00=XAM, $7F=STOR, $AE=BLOCK XAM
 
-IN    = $0200                          ; Input buffer
+kb_buffer   = $0200                          ; Input buffer
+kb_wptr     = $0300
+kb_rptr     = $0301
+kb_flags    = $0302
+RELEASED    = %00000001
+SHIFT       = %00000010
 
 ACIA_DATA   = $8600
 ACIA_STATUS = $8601
 ACIA_CMD    = $8602
 ACIA_CTRL   = $8603
 
-PORTB = $8200
-PORTA = $8201
-DDRB = $8202
-DDRA = $8203
+PORTB    = $8200
+PORTA    = $8201
+DDRB     = $8202
+DDRA     = $8203
+T1CL     = $8204
+T1CH     = $8205
+T1LL     = $8206
+T1LH     = $8207
+T2CL     = $8208
+T2CH     = $8209
+SR       = $820A
+ACR      = $820B
+PCR      = $820C
+IFR      = $820D
+IER      = $820E
+
 
  .org $8000
  .org $c000
  
 reset:
- LDA     #$1e           ; 8-N-1, 9600 baud.
- STA     ACIA_CTRL
- LDA     #$0B           ; No parity, no echo, no interrupts.
- STA     ACIA_CMD
-  lda #%11111111 ; Set all pins on port B to intput
-  sta DDRB
-  lda #%00000000 ; Set all pins on port A to input
-  sta DDRA
-  lda #%11001010
-  sta PORTB
-  lda #%11001100
-  sta PORTB
+    sei
+    lda #%11111111 ; Set all pins on port B to output
+    sta DDRB
+    lda #%00000000 ; Set all pins on port A to input
+    sta DDRA
+    lda #$82
+    sta IER         ; enable ca1 interrupt
+    lda #$01
+    sta PCR
  
  lda #$00
  sta CURSOR_POS_L        ; reset cursor position
@@ -192,165 +206,37 @@ clean_loop1:
  lda CURSOR_POS_H
  ora #$40
  sta VDP_REG
- 
  ldx #0
+ cli 
 
-wozmon_starts: 
-                LDA     #$1B           ; Begin with escape.
-NOTCR:
-                CMP     #$08           ; Backspace key?
-                BEQ     BACKSPACE      ; Yes.
-                CMP     #$1B           ; ESC?
-                BEQ     ESCAPE         ; Yes.
-                INY                    ; Advance text index.
-                BPL     NEXTCHAR       ; Auto ESC if line longer than 127.
 
-ESCAPE:
-                LDA     #$5C           ; "\".
-                JSR     ECHO           ; Output it.
 
-GETLINE:
-				LDA     #$0D		   ; Send CR
-				JSR     ECHO
+    lda #%10101010
+    sta PORTB
 
-                LDY     #$01           ; Initialize text index.
-BACKSPACE:      DEY                    ; Back up text index.
-                BMI     GETLINE        ; Beyond start of line, reinitialize.
+    lda #$00
+    sta kb_rptr
+    sta kb_wptr
+    sta kb_flags
+    tax 
+    tay 
 
-NEXTCHAR:
-                LDA     ACIA_STATUS    ; Check status.
-                AND     #$08           ; Key ready?
-                BEQ     NEXTCHAR       ; Loop until ready.
-                LDA     ACIA_DATA      ; Load character. B7 will be '0'.
-                STA     IN,Y           ; Add to text buffer.
-                JSR     ECHO           ; Display character.
-                CMP     #$0D           ; CR?
-                BNE     NOTCR          ; No.
+main_loop:
+    sei
+    lda kb_rptr
+    cmp kb_wptr
+    cli 
+    bne key_pressed
+    jmp main_loop
 
-                LDY     #$FF           ; Reset text index.
-                LDA     #$00           ; For XAM mode.
-                TAX                    ; X=0.
-SETBLOCK:
-                ASL
-SETSTOR:
-                ASL                    ; Leaves $7B if setting STOR mode.
-                STA     MODE           ; $00 = XAM, $74 = STOR, $B8 = BLOK XAM.
-BLSKIP:
-                INY                    ; Advance text index.
-NEXTITEM:
-                LDA     IN,Y           ; Get character.
-                CMP     #$0D           ; CR?
-                BEQ     GETLINE        ; Yes, done this line.
-                CMP     #$2E           ; "."?
-                BCC     BLSKIP         ; Skip delimiter.
-                BEQ     SETBLOCK       ; Set BLOCK XAM mode.
-                CMP     #$3A           ; ":"?
-                BEQ     SETSTOR        ; Yes, set STOR mode.
-                CMP     #$52           ; "R"?
-                BEQ     RUN            ; Yes, run user program.
-                STX     L              ; $00 -> L.
-                STX     H              ;    and H.
-                STY     YSAV           ; Save Y for comparison
+key_pressed:
+    ldx kb_rptr
+    lda kb_buffer, x 
+    jsr ECHO
+    inc kb_rptr
+    jmp main_loop
 
-NEXTHEX:
-                LDA     IN,Y           ; Get character for hex test.
-                EOR     #$30           ; Map digits to $0-9.
-                CMP     #$0A           ; Digit?
-                BCC     DIG            ; Yes.
-                ADC     #$88           ; Map letter "A"-"F" to $FA-FF.
-                CMP     #$FA           ; Hex letter?
-                BCC     NOTHEX         ; No, character not hex.
-DIG:
-                ASL
-                ASL                    ; Hex digit to MSD of A.
-                ASL
-                ASL
-
-                LDX     #$04           ; Shift count.
-HEXSHIFT:
-                ASL                    ; Hex digit left, MSB to carry.
-                ROL     L              ; Rotate into LSD.
-                ROL     H              ; Rotate into MSD's.
-                DEX                    ; Done 4 shifts?
-                BNE     HEXSHIFT       ; No, loop.
-                INY                    ; Advance text index.
-                BNE     NEXTHEX        ; Always taken. Check next character for hex.
-
-NOTHEX:
-                CPY     YSAV           ; Check if L, H empty (no hex digits).
-                BEQ     ESCAPE         ; Yes, generate ESC sequence.
-
-                BIT     MODE           ; Test MODE byte.
-                BVC     NOTSTOR        ; B6=0 is STOR, 1 is XAM and BLOCK XAM.
-
-                LDA     L              ; LSD's of hex data.
-                STA     (STL,X)        ; Store current 'store index'.
-                INC     STL            ; Increment store index.
-                BNE     NEXTITEM       ; Get next item (no carry).
-                INC     STH            ; Add carry to 'store index' high order.
-TONEXTITEM:     JMP     NEXTITEM       ; Get next command item.
-
-RUN:
-                JMP     (XAML)         ; Run at current XAM index.
-
-NOTSTOR:
-                BMI     XAMNEXT        ; B7 = 0 for XAM, 1 for BLOCK XAM.
-
-                LDX     #$02           ; Byte count.
-SETADR:         LDA     L-1,X          ; Copy hex data to
-                STA     STL-1,X        ;  'store index'.
-                STA     XAML-1,X       ; And to 'XAM index'.
-                DEX                    ; Next of 2 bytes.
-                BNE     SETADR         ; Loop unless X = 0.
-
-NXTPRNT:
-                BNE     PRDATA         ; NE means no address to print.
-                LDA     #$0D           ; CR.
-                JSR     ECHO           ; Output it.
-                LDA     XAMH           ; 'Examine index' high-order byte.
-                JSR     PRBYTE         ; Output it in hex format.
-                LDA     XAML           ; Low-order 'examine index' byte.
-                JSR     PRBYTE         ; Output it in hex format.
-                LDA     #$3A           ; ":".
-                JSR     ECHO           ; Output it.
-
-PRDATA:
-                LDA     #$20           ; Blank.
-                JSR     ECHO           ; Output it.
-                LDA     (XAML,X)       ; Get data byte at 'examine index'.
-                JSR     PRBYTE         ; Output it in hex format.
-XAMNEXT:        STX     MODE           ; 0 -> MODE (XAM mode).
-                LDA     XAML
-                CMP     L              ; Compare 'examine index' to hex data.
-                LDA     XAMH
-                SBC     H
-                BCS     TONEXTITEM     ; Not less, so no more data to output.
-
-                INC     XAML
-                BNE     MOD8CHK        ; Increment 'examine index'.
-                INC     XAMH
-
-MOD8CHK:
-                LDA     XAML           ; Check low-order 'examine index' byte
-                AND     #$07           ; For MOD 8 = 0
-                BPL     NXTPRNT        ; Always taken.
-
-PRBYTE:
-                PHA                    ; Save A for LSD.
-                LSR
-                LSR
-                LSR                    ; MSD to LSD position.
-                LSR
-                JSR     PRHEX          ; Output hex digit.
-                PLA                    ; Restore A.
-
-PRHEX:
-                AND     #$0F           ; Mask LSD for hex print.
-                ORA     #$30           ; Add "0".
-                CMP     #$3A           ; Digit?
-                BCC     ECHO           ; Yes, output it.
-                ADC     #$06           ; Add offset for letter.
-				
+message: .asciiz "Hello world"
 
 ECHO:
  PHA
@@ -671,7 +557,105 @@ font_end:
   .byte $FF
 
 nmi:
+    rti 
 irq:
+    pha
+    txa
+    pha
+    lda kb_flags
+    and #RELEASED       ; check if releaseing a key
+    beq read_key        ; otherwise, read the key
+
+    lda kb_flags
+    eor #RELEASED           ; flip the releasing key
+    sta kb_flags
+    lda PORTA               ; read to clear the interrupt, read released key
+    cmp #$12                ; left shift
+    beq shift_up
+    cmp #$59
+    beq shift_up
+    jmp exit
+shift_up:
+    lda kb_flags
+    eor #SHIFT
+    sta kb_flags
+    jmp exit
+
+read_key:
+    lda PORTA           ; get scancode
+    cmp #$F0            ; release?
+    beq key_release
+    cmp #$12            ; left shift ? 
+    beq shift_down
+    cmp #$59
+    beq shift_down
+
+    tax
+    lda kb_flags
+    and #SHIFT
+    bne shifted_key
+
+    lda keymap, x 
+    jmp push_key
+
+shifted_key:
+    lda keymap_shifted, x
+
+push_key:
+    ldx kb_wptr
+    sta kb_buffer, x    ; put it in the buffer
+    inc kb_wptr
+    jmp exit
+shift_down:
+    lda kb_flags
+    ora #SHIFT          ; set shitf flag
+    sta kb_flags
+    jmp exit
+key_release:
+    lda kb_flags
+    ora #RELEASED       ; set released flag
+    sta kb_flags
+exit:
+    pla
+    tax 
+    pla
+    rti
+
+keymap:
+    .byte "????????????? `?" ; 00-0f
+    .byte "?????q1???zsaw2?" ; 10-1f
+    .byte "?cxde43?? vftr5?" ; 20-2f
+    .byte "?nbhgy6???mju78?" ; 30-3f
+    .byte "?,kio09??./l;p-?" ; 40-4f
+    .byte "??'?[=?????]?\??" ; 50-5f
+    .byte "?????????1?47???" ; 60-6f
+    .byte "0.2568???+3-*9??" ; 70-7f
+    .byte "????????????????" ; 80-8f
+    .byte "????????????????" ; 90-8f
+    .byte "????????????????" ; a0-8f
+    .byte "????????????????" ; b0-8f
+    .byte "????????????????" ; c0-8f
+    .byte "????????????????" ; d0-8f
+    .byte "????????????????" ; e0-8f
+    .byte "????????????????" ; f0-8f
+
+keymap_shifted:
+    .byte "????????????? ~?" ; 00-0f
+    .byte "?????Q!???ZSAW@?" ; 10-1f
+    .byte "?CXDE$#?? VFTR%?" ; 20-2f
+    .byte "?NBHGY^???MJU&*?" ; 30-3f
+    .byte "?<KIO)(??>?L:P_?" ; 40-4f
+    .byte '??"?{+?????}?|??' ; 50-5f
+    .byte "?????????1?47???" ; 60-6f
+    .byte "0.2568???+3-*9??" ; 70-7f
+    .byte "????????????????" ; 80-8f
+    .byte "????????????????" ; 90-8f
+    .byte "????????????????" ; a0-8f
+    .byte "????????????????" ; b0-8f
+    .byte "????????????????" ; c0-8f
+    .byte "????????????????" ; d0-8f
+    .byte "????????????????" ; e0-8f
+    .byte "????????????????" ; f0-8f
 
  .org $fffa
  .word nmi

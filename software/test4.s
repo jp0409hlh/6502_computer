@@ -44,17 +44,34 @@ H     = $29                            ; Hex value parsing High
 YSAV  = $2A                            ; Used to see if hex value is given
 MODE  = $2B                            ; $00=XAM, $7F=STOR, $AE=BLOCK XAM
 
-IN    = $0200                          ; Input buffer
+IN    = $0400                          ; Input buffer
+kb_buffer   = $0200                          ; Input buffer
+kb_wptr     = $0300
+kb_rptr     = $0301
+kb_flags    = $0302
+RELEASED    = %00000001
+SHIFT       = %00000010
 
 ACIA_DATA   = $8600
 ACIA_STATUS = $8601
 ACIA_CMD    = $8602
 ACIA_CTRL   = $8603
 
-PORTB = $8200
-PORTA = $8201
-DDRB = $8202
-DDRA = $8203
+PORTB    = $8200
+PORTA    = $8201
+DDRB     = $8202
+DDRA     = $8203
+T1CL     = $8204
+T1CH     = $8205
+T1LL     = $8206
+T1LH     = $8207
+T2CL     = $8208
+T2CH     = $8209
+SR       = $820A
+ACR      = $820B
+PCR      = $820C
+IFR      = $820D
+IER      = $820E
 
  .org $8000
  .org $c000
@@ -72,6 +89,10 @@ reset:
   sta PORTB
   lda #%11001100
   sta PORTB
+  lda #$82
+    sta IER         ; enable ca1 interrupt
+    lda #$01
+    sta PCR
  
  lda #$00
  sta CURSOR_POS_L        ; reset cursor position
@@ -194,6 +215,10 @@ clean_loop1:
  sta VDP_REG
  
  ldx #0
+ lda #$00
+    sta kb_rptr
+    sta kb_wptr
+    sta kb_flags
 
 wozmon_starts: 
                 LDA     #$1B           ; Begin with escape.
@@ -218,10 +243,14 @@ BACKSPACE:      DEY                    ; Back up text index.
                 BMI     GETLINE        ; Beyond start of line, reinitialize.
 
 NEXTCHAR:
-                LDA     ACIA_STATUS    ; Check status.
-                AND     #$08           ; Key ready?
-                BEQ     NEXTCHAR       ; Loop until ready.
-                LDA     ACIA_DATA      ; Load character. B7 will be '0'.
+                sei
+                lda     kb_rptr
+                cmp     kb_wptr
+                cli 
+                beq     NEXTCHAR
+                ldx     kb_rptr
+                lda     kb_buffer, x 
+                inc     kb_rptr
                 STA     IN,Y           ; Add to text buffer.
                 JSR     ECHO           ; Display character.
                 CMP     #$0D           ; CR?
@@ -671,7 +700,109 @@ font_end:
   .byte $FF
 
 nmi:
+    rti 
 irq:
+    pha
+    txa
+    pha
+    lda kb_flags
+    and #RELEASED       ; check if releaseing a key
+    beq read_key        ; otherwise, read the key
+
+    lda kb_flags
+    eor #RELEASED           ; flip the releasing key
+    sta kb_flags
+    lda PORTA               ; read to clear the interrupt, read released key
+    cmp #$12                ; left shift
+    beq shift_up
+    cmp #$59
+    beq shift_up
+    jmp exit
+shift_up:
+    lda kb_flags
+    eor #SHIFT
+    sta kb_flags
+    jmp exit
+
+read_key:
+    lda PORTA           ; get scancode
+    cmp #$F0            ; release?
+    beq key_release
+    cmp #$12            ; left shift ? 
+    beq shift_down
+    cmp #$59
+    beq shift_down
+    cmp #$5A
+    beq enter_down
+
+    tax
+    lda kb_flags
+    and #SHIFT
+    bne shifted_key
+
+    lda keymap, x 
+    jmp push_key
+enter_down:
+    lda #$0D 
+    jmp push_key
+shifted_key:
+    lda keymap_shifted, x
+
+push_key:
+    ldx kb_wptr
+    sta kb_buffer, x    ; put it in the buffer
+    inc kb_wptr
+    jmp exit
+shift_down:
+    lda kb_flags
+    ora #SHIFT          ; set shitf flag
+    sta kb_flags
+    jmp exit
+key_release:
+    lda kb_flags
+    ora #RELEASED       ; set released flag
+    sta kb_flags
+exit:
+    pla
+    tax 
+    pla
+    rti 
+
+keymap:
+    .byte "????????????? `?" ; 00-0f
+    .byte "?????q1???zsaw2?" ; 10-1f
+    .byte "?cxde43?? vftr5?" ; 20-2f
+    .byte "?nbhgy6???mju78?" ; 30-3f
+    .byte "?,kio09??./l;p-?" ; 40-4f
+    .byte "??'?[=?????]?\??" ; 50-5f
+    .byte "?????????1?47???" ; 60-6f
+    .byte "0.2568???+3-*9??" ; 70-7f
+    .byte "????????????????" ; 80-8f
+    .byte "????????????????" ; 90-8f
+    .byte "????????????????" ; a0-8f
+    .byte "????????????????" ; b0-8f
+    .byte "????????????????" ; c0-8f
+    .byte "????????????????" ; d0-8f
+    .byte "????????????????" ; e0-8f
+    .byte "????????????????" ; f0-8f
+
+keymap_shifted:
+    .byte "????????????? ~?" ; 00-0f
+    .byte "?????Q!???ZSAW@?" ; 10-1f
+    .byte "?CXDE$#?? VFTR%?" ; 20-2f
+    .byte "?NBHGY^???MJU&*?" ; 30-3f
+    .byte "?<KIO)(??>?L:P_?" ; 40-4f
+    .byte '??"?{+?????}?|??' ; 50-5f
+    .byte "?????????1?47???" ; 60-6f
+    .byte "0.2568???+3-*9??" ; 70-7f
+    .byte "????????????????" ; 80-8f
+    .byte "????????????????" ; 90-8f
+    .byte "????????????????" ; a0-8f
+    .byte "????????????????" ; b0-8f
+    .byte "????????????????" ; c0-8f
+    .byte "????????????????" ; d0-8f
+    .byte "????????????????" ; e0-8f
+    .byte "????????????????" ; f0-8f
 
  .org $fffa
  .word nmi
@@ -680,3 +811,6 @@ irq:
 
  
  
+
+
+
