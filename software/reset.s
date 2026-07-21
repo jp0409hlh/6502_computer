@@ -150,6 +150,11 @@ clean_loop1:
     sta CHR_OUT_VEC
     lda #>VPRINTC
     sta CHR_OUT_VEC + 1
+
+    lda #<VPRINTCCTRL
+    sta CTRL_CHR_OUT_VEC
+    lda #>VPRINTCCTRL
+    sta CTRL_CHR_OUT_VEC + 1
     
     lda #<VPRINTS
     sta STR_OUT_VEC
@@ -165,6 +170,11 @@ clean_loop1:
     sta CHR_OUT_VEC
     lda #>SPRINTC
     sta CHR_OUT_VEC + 1
+
+    lda #<SPRINTC
+    sta CTRL_CHR_OUT_VEC
+    lda #>SPRINTC
+    sta CTRL_CHR_OUT_VEC + 1
     
     lda #<SPRINTS
     sta STR_OUT_VEC

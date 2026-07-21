@@ -1,13 +1,12 @@
-interrupt vector handleing
+interrupt vector handleing -- DONE
+
+Print control character for serial mode
 
 peripheral firmware loading and configuration
     - Hardcoded indentifiers in firmware rom (eg. Storage device for os mounting)
 
-file system
-    - Custom simple file system 
-    - Needs software (in C) to convert file to this FS and to raw data
 
-file transfer via UART
+file transfer via UART -- Partly done, need to implement timeout
 
 floppy disk controller expansion card
 

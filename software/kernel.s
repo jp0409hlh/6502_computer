@@ -31,12 +31,25 @@ WRITE:
 ; PRINT CHARACTER
 ; Usage : Write a character to VDP or serial (depends on the
 ; current hardware configuration) in scroll mode.
+; ! Notice ! : Control ascii characters wont do anything, e.g.
+; printing LF wont cause line feed. In serial mode, all special
+; characters will be replaced with '.' .
 ; How to use : Store the desired character to A.
 ; Modified flag : <depends on the vector>
 ; Modified registers : <depends on the vector>
 ; Modified memory : <depends on the vector>
 PRINTC:
     jmp (CHR_OUT_VEC)
+
+;PRINT CONTROL CHARACTER
+; Usage : Write a control character to VDP or serial (depends on the
+; current hardware configuration) in scroll mode.
+; How to use : Store the desired character to A.
+; Modified flag : <depends on the vector>
+; Modified registers : <depends on the vector>
+; Modified memory : <depends on the vector>
+PRINTCCTRL:
+    jmp (CTRL_CHR_OUT_VEC)
 
 ; PRINT STRING
 ; Usage : Prints a string to VDP or serial (depends on the current
@@ -76,12 +89,6 @@ GETC:
 ; Modified memory : CURSOR_X, CURSOR_Y, CURSOR_L, CURSOR_H 
 VPRINTC:
     pha 
-    cmp #$0D                    ; Carriage return?
-    beq key_return              ; Yes
-    cmp #$08                    ; Backspace?
-    beq key_backspace           ; Yes
-    cmp #$0A                    ; Line feed?
-    beq key_linefeed            ; Yes
     lda CURSOR_X                ; Otherwise, start printing a character to screen
     cmp SCREEN_WIDTH            ; Has cursor X exceeded screen width?
     bne no_next_line            ; No
@@ -91,7 +98,7 @@ VPRINTC:
     lda CURSOR_Y                
     cmp #24                     ; Has the cursor Y exceed screen height?
     bne no_scroll_up            ; No
-    jsr vdp_scroll_up               ; Yes, scroll up
+    jsr vdp_scroll_up           ; Yes, scroll up
 no_next_line:
 no_scroll_up:
     pla 
@@ -99,6 +106,20 @@ no_scroll_up:
     inc CURSOR_X
     rts 
 
+; VIDEO PRINT CONTROL CHARACTER
+; Usage : Write a control character to VDP in scroll mode.
+; How to use : Store the desired character to A.
+; Modified flag : ?
+; Modified registers : None
+; Modified memory : CURSOR_X, CURSOR_Y, CURSOR_L, CURSOR_H
+VPRINTCCTRL:
+    pha 
+    cmp #$0D                    ; Carriage return?
+    beq key_return              ; Yes
+    cmp #$08                    ; Backspace?
+    beq key_backspace           ; Yes
+    cmp #$0A                    ; Line feed?
+    beq key_linefeed            ; Yes
 key_linefeed:                   ; LF, automatically does CR too      
     inc CURSOR_Y                ; Increment cursor y               
     lda CURSOR_Y
@@ -335,6 +356,7 @@ KBGETC:
 
 ; SERIAL PRINT CHARACTER
 ; Usage : Sends a character through serial.
+; ! Notice ! : All control characters will render as '.' .
 ; How to use : store the desired character to A.
 ; Modified flag : ?
 ; Modified registers : none
@@ -342,6 +364,10 @@ KBGETC:
 SPRINTC:
 .if .def(ACIA_BUG)
     pha
+    cmp #$20
+    bcs not_ctrl_char
+    lda #'.'
+not_ctrl_char:
     sta ACIA_DATA
     lda #$FF
 @txdelay:       

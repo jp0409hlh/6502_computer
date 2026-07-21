@@ -146,6 +146,7 @@ SCROLL_BUF : .res 41                        ; buffer to store a line during scro
 
 ; IO routine vectors
 CHR_OUT_VEC : .res 2                        ; Scroll mode character out vector (default : PRINTC)
+CTRL_CHR_OUT_VEC : .res 2                   ; Scroll mode control character out vector
 STR_OUT_VEC : .res 2                        ; Scroll mode string out vector (default : PRINTS)
 CHR_SET_VEC : .res 2                        ; Character set vector (default SETC)
 CHAR_IN_VEC : .res 2                        ; key in vector 

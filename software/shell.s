@@ -26,6 +26,12 @@
         jsr PRINTC
 .endmacro
 
+; print control character
+.macro putctrlchar arg 
+        lda arg 
+        jsr PRINTCCTRL
+.endmacro
+
 ; Pascal style string
 .macro  PString Arg
         .byte   .strlen(Arg), Arg
@@ -73,7 +79,7 @@ SHELL_START:
 ; TODO : memory check, VDP check
 ; TODO : Serial only shell?
         printIm SHELL_NAME_VER
-        putchar #$0A 
+        putctrlchar #$0A 
         putchar #'@'
         putchar #' '
         lda #'_'
@@ -92,9 +98,9 @@ SHELL_LOOP:
         bcc SHELL_LOOP                                  ; New key input? Carry set yes, otherwise no.
         cmp #$08                                        ; Backspace?
         beq input_backspace
-        jsr PRINTC                                      ; Echo the key to the output 
         cmp #$0A                                        ; Is the key LF? (i.e. is enter pressed?)
         beq input_line_feed
+        jsr PRINTC                                      ; Echo the key to the output 
         lda #'_'
         jsr SETC
         jmp SHELL_LOOP                                  ; Keep getting characters
@@ -108,7 +114,8 @@ input_backspace:                                        ; Processing backspace.
         jmp SHELL_LOOP
 
 input_line_feed:                                        ; LF pressed(aka Enter key). Start comparing input string to commands
-        sei                                             
+        sei    
+        jsr PRINTCCTRL                                         
         lda KB_WPTR
         sta READ_END_PTR
         ldy #$FF                                        ; Set Y to 0 as command line starts at buffer index 0 (here sets $FF because of future iny)
@@ -174,7 +181,7 @@ no_command_found:
         printIm SHELL_CMD_NOT_FND
 
 input_process_done:
-        putchar #$0A
+        putctrlchar #$0A
         lda #$00
         sta KB_RPTR
         sta KB_WPTR
@@ -238,7 +245,7 @@ cmd_col_get_arg:
         eor #$30                                ; Map char '0'-'9' to $0-9
         cmp #$0A                                ; Is digit?
         bcc cmd_col_is_digit                    ; Yes
-        adc #$88                                ; Map char 'A'-'F' to $FA-$FF
+        adc #$A8                                ; Map char 'a'-'f' to $FA-$FF
         cmp #$FA                                ; Is Hex char?
         bcc cmd_col_arg_err                     ; No
         sec 
@@ -297,7 +304,7 @@ cmd_load_start:
         lda #NAK                                                ; Send NAK
         jsr SPRINTC
         lda #$0A                                                ; New line
-        jsr PRINTC 
+        jsr PRINTCCTRL
 get_SOH_loop:
         jsr SGETC
         bcc get_SOH_loop
@@ -366,7 +373,7 @@ transfer_done:
         lda #ACK                                                ; Send ACK
         jsr SPRINTC
         lda #$0A
-        jsr PRINTC
+        jsr PRINTCCTRL
         printIm cmd_load_end_of_transfer_msg
         jmp input_process_done
 
@@ -469,7 +476,7 @@ cmd_mon_setadr:
 
 cmd_mon_nxtprnt:
         bne cmd_mon_prdata              ; Not equal means no address to print
-        putchar #$0A                    ; Print linefeed
+        putctrlchar #$0A                    ; Print linefeed
         lda MON_XAMH                ; Get data byte at 'XAM index'
         jsr cmd_mon_prbyte              ; Output it in hex format
         lda MON_XAML                    ; Low-order 'XAM index' byte
