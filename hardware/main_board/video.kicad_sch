@@ -4120,16 +4120,6 @@
 		)
 		(uuid "1493ba85-4c38-44db-9545-b2e2018bd372")
 	)
-	(text "might need delay here ?\n"
-		(exclude_from_sim no)
-		(at 93.472 85.344 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-		)
-		(uuid "d110bfbb-87e9-43af-b2b5-7f57198a998e")
-	)
 	(junction
 		(at 181.61 52.07)
 		(diameter 0)
@@ -10847,7 +10837,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal"
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
 			(at 61.722 160.02 90)
 			(effects
 				(font
@@ -11454,7 +11444,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal"
+		(property "Footprint" "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal"
 			(at 70.612 160.02 90)
 			(effects
 				(font

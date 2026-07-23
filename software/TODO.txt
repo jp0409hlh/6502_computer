@@ -1,12 +1,14 @@
+file transfer via UART -- !!!!!!!!! NEED FIXING !!!!!!!!!!!!!!!
+
 interrupt vector handleing -- DONE
+
+
 
 Print control character for serial mode
 
 peripheral firmware loading and configuration
     - Hardcoded indentifiers in firmware rom (eg. Storage device for os mounting)
 
-
-file transfer via UART -- Partly done, need to implement timeout
 
 floppy disk controller expansion card
 

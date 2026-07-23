@@ -411,12 +411,12 @@ cmd_mon_nextitem:
         cmp #$0A                        ; LF?
         beq exit_mon1                   ; Yes, exits
         cmp #'.'                        ; "."?
-        bcc cmd_mon_blskip                      ; skips delimeter
-        beq cmd_mon_setblock                    ; Set BLOCK XAM mode
+        bcc cmd_mon_blskip              ; skips delimeter
+        beq cmd_mon_setblock            ; Set BLOCK XAM mode
         cmp #':'                        ; ":"?
-        beq cmd_mon_setstor                     ; Set STOR mode
+        beq cmd_mon_setstor             ; Set STOR mode
         cmp #'r'                        ; "r"?
-        beq cmd_mon_run                         ; Run user program
+        beq cmd_mon_run                 ; Run user program
         stx MON_L                       ; $00->L
         stx MON_H                       ; $00->H
         sty MON_YSAV                    ; Saves Y
@@ -470,20 +470,20 @@ cmd_mon_notstor:
 cmd_mon_setadr:
         lda MON_L-1, X                  ; Copy hex data to
         sta MON_STL-1, X                ;  'store index'
-        sta MON_XAML-1, X                    ;  and to 'XAM index'
+        sta MON_XAML-1, X               ;  and to 'XAM index'
         dex 
         bne cmd_mon_setadr              ; Loop until X = 0
 
 cmd_mon_nxtprnt:
         bne cmd_mon_prdata              ; Not equal means no address to print
-        putctrlchar #$0A                    ; Print linefeed
-        lda MON_XAMH                ; Get data byte at 'XAM index'
+        putctrlchar #$0A                ; Print linefeed
+        lda MON_XAMH                    ; Get data byte at 'XAM index'
         jsr cmd_mon_prbyte              ; Output it in hex format
         lda MON_XAML                    ; Low-order 'XAM index' byte
         jsr cmd_mon_prbyte              ; Output it in hex format
         putchar #':'
 cmd_mon_prdata:
-        putchar #$20                    ; Blank
+        putchar #' '                    ; Blank
         lda (MON_XAML,X)                ; Get data byte at 'XAM index'
         jsr cmd_mon_prbyte
 cmd_mon_xamnext:
@@ -530,7 +530,6 @@ CMD_RST:
 
 
 CMD_RUN:
-
         jsr RAM_START
         jmp input_process_done
 
