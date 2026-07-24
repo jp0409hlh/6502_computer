@@ -46,7 +46,7 @@
 .endmacro
 
 SHELL_NAME_VER:     PString "JP6502 OS v0.0.1"
-SHELL_CMD_NOT_FND:      PString "No command found"
+SHELL_CMD_NOT_FND:      PString "CMD NOT FOUND"
 SHELL_CMD:          
         Cmd "clr"  
         Cmd "dump" 
@@ -59,7 +59,7 @@ SHELL_CMD:
         Cmd "rst"  
         Cmd "col" 
         Cmd "asm"  
-        Cmd "load" 
+        Cmd "rx" 
         .byte $00
         
 SHELL_CMD_ADDR:                 ; RTS style jump table
@@ -74,7 +74,7 @@ SHELL_CMD_ADDR:                 ; RTS style jump table
         .word CMD_RST  -1  ; resets the system
         .word CMD_COL  -1  ; Changes color of the terminal
         .word CMD_ASM  -1  ; Enters assmenbly editor
-        .word CMD_LOAD -1  ; Load program from serial
+        .word CMD_RX -1    ; Load program from serial
 SHELL_START:
 ; TODO : memory check, VDP check
 ; TODO : Serial only shell?
@@ -90,7 +90,7 @@ SHELL_START:
         sta READ_PTR
         sta READ_END_PTR
 
-        lda #'H'
+        lda #'H'                                        ; debug purpose
         sta ACIA_DATA
         cli 
 SHELL_LOOP:
@@ -288,8 +288,8 @@ CMD_INFO:
 
 
 ; LOAD PROGRAM FROM SERIAL (XMODEM)
-CMD_LOAD:
-        printIm cmd_load_listening_msg
+CMD_RX:
+        printIm cmd_rx_listening_msg
         lda #<RAM_START                                 ; Setup pointer for loading byte
         sta LOAD_PTR                                    ; as well as the previous pointer
         sta LAST_LOAD_PTR
@@ -299,8 +299,8 @@ CMD_LOAD:
         ldx #$00                                                ; Set previous blknum to 0
         stx LAST_BLK_NUM
         stx ZPR3
-cmd_load_start:
-        printIm cmd_load_send_NAK_msg
+cmd_rx_start:
+        printIm cmd_rx_send_NAK_msg
         lda #NAK                                                ; Send NAK
         jsr SPRINTC
         lda #$0A                                                ; New line
@@ -317,21 +317,21 @@ end_of_transfer:
         jmp transfer_done
 received_SOH:
 get_blknum:
-        printIm cmd_load_got_SOH_msg
+        printIm cmd_rx_got_SOH_msg
         jsr SGETC
         bcc get_blknum                                          ; Got block number?
         cmp LAST_BLK_NUM                                        ; Is it the same as the previous?
         beq send_ACK                                            ; Yes, duplicate block, send ACK
         sta ZPR3                                                ; Temporarily save to ZPR3
-        printIm cmd_load_got_blk_num_msg
+        printIm cmd_rx_got_blk_num_msg
 get_inv_blknum:
         jsr SGETC
         bcc get_inv_blknum                                      ; Got inverse block number?
         clc 
         adc ZPR3                                                ; Add it with block number
         cmp #$FF                                                ; Is it 255?
-        bne cmd_load_start                                      ; No, send NAK and retry
-        printIm cmd_load_got_inv_blk_num_cor
+        bne cmd_rx_start                                        ; No, send NAK and retry
+        printIm cmd_rx_got_inv_blk_num_cor
                                                                 ; Otherwise start receiving packet data
         ldy #128
         stx ZPR2                                                ; Initialize chksum result to 0
@@ -352,17 +352,17 @@ get_chk_sum:
         bcc get_chk_sum                                         ; Get chksum from transeiver
         cmp ZPR2                                                ; Is it correct?
         beq chk_sum_correct                                     ; Yes
-        printIm cmd_load_chksum_error
+        printIm cmd_rx_chksum_error
         lda LAST_LOAD_PTR                                       ; Otherwise, restore LOAD_PTR and try again
         sta LOAD_PTR
         lda LAST_LOAD_PTR + 1
         sta LOAD_PTR
-        jmp cmd_load_start
+        jmp cmd_rx_start
 send_ACK:                                                       ; All correct, send ACK
 chk_sum_correct:
         lda #ACK                                                ; Send ACK
         jsr SPRINTC
-        printIm cmd_load_send_ACK_msg
+        printIm cmd_rx_send_ACK_msg
         inc LAST_BLK_NUM                                        ; Increment previous block number
         lda LOAD_PTR                                            ; LAST_LOAD_PTR = LOAD_PTR
         sta LAST_LOAD_PTR
@@ -374,17 +374,17 @@ transfer_done:
         jsr SPRINTC
         lda #$0A
         jsr PRINTCCTRL
-        printIm cmd_load_end_of_transfer_msg
+        printIm cmd_rx_end_of_transfer_msg
         jmp input_process_done
 
-cmd_load_listening_msg: PString "Listening..."
-cmd_load_send_NAK_msg: PString "NAK->/"
-cmd_load_send_ACK_msg: PString "ACK->/"
-cmd_load_got_SOH_msg: PString "<-SOH/"
-cmd_load_got_blk_num_msg: PString "<-blknum/ "
-cmd_load_got_inv_blk_num_cor: PString "[blknum ok]"
-cmd_load_chksum_error: PString "!chksum err!"
-cmd_load_end_of_transfer_msg: PString "Ready"
+cmd_rx_listening_msg: PString "Listening..."
+cmd_rx_send_NAK_msg: PString "NAK->/"
+cmd_rx_send_ACK_msg: PString "ACK->/"
+cmd_rx_got_SOH_msg: PString "<-SOH/"
+cmd_rx_got_blk_num_msg: PString "<-blknum/ "
+cmd_rx_got_inv_blk_num_cor: PString "[blknum ok]"
+cmd_rx_chksum_error: PString "!chksum err!"
+cmd_rx_end_of_transfer_msg: PString "Ready"
 
 ; MONITOR
 ; Orginally written by Steve Wozniak
