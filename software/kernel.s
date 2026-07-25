@@ -354,6 +354,27 @@ KBGETC:
     rts
 .endif
 
+; SERIAL SEND C
+; Usage : Sends a character through serial.
+; How to use : store the desired character to A.
+; Modified flag : ?
+; Modified registers : none
+; Modified memory : none
+SSENDC:
+    .if .def(ACIA_BUG)
+    pha 
+    sta ACIA_DATA
+    lda #$FF
+@txdelay:       
+	sbc #$01
+    bne @txdelay
+    pla
+.else  
+    sta ACIA_DATA 
+.endif
+    rts 
+
+
 ; SERIAL PRINT CHARACTER
 ; Usage : Sends a character through serial.
 ; ! Notice ! : All control characters will render as '.' .
@@ -654,6 +675,55 @@ ATOF:
 ; Modifies memory : 
 FTOA:
     rts
+
+; 
+
+; --------------------
+; -      TIME        -
+; --------------------
+
+; SLEEP IN SECONDS
+; Usage: Halts the processor
+; How to use:
+; Modified flag :
+; Modified register : 
+; Modifies memory : ZPR0
+SLEEPSEC:
+    sta ZPR0                    ; How many seconds to pass?
+    pha 
+    txa 
+    pha 
+    tya 
+    pha 
+
+    pla 
+    tay 
+    pla 
+    tax 
+    pla 
+    rts 
+
+; SLEEP IN MILLISECONDS
+; Usage: Halts the processor
+; How to use:
+; Modified flag :
+; Modified register : 
+; Modifies memory : 
+SLEEPMILLISEC:
+    sta ZPR0                    ; How many seconds to pass?
+
+    pha 
+    txa 
+    pha 
+    tya 
+    pha 
+
+    pla 
+    tay 
+    pla 
+    tax 
+    pla 
+    rts 
 
 ; ********************************************************
 ; *           DEFAULT INTERRUPT SERVICE ROUTINE          *

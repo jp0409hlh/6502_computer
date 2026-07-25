@@ -201,7 +201,8 @@ not_line_feed:
 
 
 
-
+; ASSEMBLER
+; Built-in assembler and disassembler
 CMD_ASM:
         jmp input_process_done
 
@@ -302,7 +303,7 @@ CMD_RX:
 cmd_rx_start:
         printIm cmd_rx_send_NAK_msg
         lda #NAK                                                ; Send NAK
-        jsr SPRINTC
+        jsr SSENDC
         lda #$0A                                                ; New line
         jsr PRINTCCTRL
 get_SOH_loop:
@@ -315,6 +316,10 @@ get_SOH_loop:
         jmp get_SOH_loop                                        ; Otherwise, keep listening
 end_of_transfer:
         jmp transfer_done
+dup_transfer:
+        lda #ACK 
+        jsr SSENDC
+        jmp get_SOH_loop
 received_SOH:
 get_blknum:
         printIm cmd_rx_got_SOH_msg
@@ -322,7 +327,7 @@ get_blknum:
         bcc get_blknum                                          ; Got block number?
         cmp LAST_BLK_NUM                                        ; Is it the same as the previous?
         beq send_ACK                                            ; Yes, duplicate block, send ACK
-        sta ZPR3                                                ; Temporarily save to ZPR3
+        sta ZPR3                                                ; Temporarily save block number to ZPR3
         printIm cmd_rx_got_blk_num_msg
 get_inv_blknum:
         jsr SGETC
@@ -341,7 +346,7 @@ get_packet_data:
         bcc get_packet_data                                     ; Got data?
         sta (LOAD_PTR,X)                                        ; Store it to (LOAD_PTR + 0)
         clc 
-        adc ZPR2                                                ; Add chksum
+        adc ZPR2                                                ; Add to chksum
         sta ZPR2
         inc16 LOAD_PTR                                          ; Increment LOAD_PTR
         dey                     
@@ -356,12 +361,12 @@ get_chk_sum:
         lda LAST_LOAD_PTR                                       ; Otherwise, restore LOAD_PTR and try again
         sta LOAD_PTR
         lda LAST_LOAD_PTR + 1
-        sta LOAD_PTR
+        sta LOAD_PTR + 1
         jmp cmd_rx_start
 send_ACK:                                                       ; All correct, send ACK
 chk_sum_correct:
         lda #ACK                                                ; Send ACK
-        jsr SPRINTC
+        jsr SSENDC
         printIm cmd_rx_send_ACK_msg
         inc LAST_BLK_NUM                                        ; Increment previous block number
         lda LOAD_PTR                                            ; LAST_LOAD_PTR = LOAD_PTR
@@ -371,7 +376,7 @@ chk_sum_correct:
         jmp get_SOH_loop                                        ; Get the next packet
 transfer_done:
         lda #ACK                                                ; Send ACK
-        jsr SPRINTC
+        jsr SSENDC
         lda #$0A
         jsr PRINTCCTRL
         printIm cmd_rx_end_of_transfer_msg
