@@ -1,28 +1,5 @@
 .segment "KERNEL"
 
-; ********************************************************
-; *                     SYSTEM CALL                      *
-; ********************************************************
-; READ BYTE
-; Description : Read a number of bytes from the file descriptor to
-; a buffer. ZPR2 returns the first byte read.
-; Pass in :
-;  | A : fd  |  X : count  |  ZPR0 : BUF_L  |  ZPR1 : BUF_H  |
-; Return : 
-;  | Y : ret |  ZPR2 : byte  |
-READ: 
-    rts
-
-; WRITE BYTE
-; Descritption : Write a number of bytes from a buffer to the 
-; file descriptor.
-; Pass in :
-;  | A : fd  |  X : count  |  ZPR0 : BUF_L  |  ZPR1 : BUF_H  |
-; Return : 
-;  | Y : ret |
-WRITE:
-    rts 
-
 
 ; ********************************************************
 ; *              STANDARD INPUT OUTPUT                   *
@@ -38,18 +15,20 @@ WRITE:
 ; Modified flag : <depends on the vector>
 ; Modified registers : <depends on the vector>
 ; Modified memory : <depends on the vector>
-PRINTC:
+.proc PRINTC
     jmp (CHR_OUT_VEC)
+.endproc
 
-;PRINT CONTROL CHARACTER
+; PRINT CONTROL CHARACTER
 ; Usage : Write a control character to VDP or serial (depends on the
 ; current hardware configuration) in scroll mode.
 ; How to use : Store the desired character to A.
 ; Modified flag : <depends on the vector>
 ; Modified registers : <depends on the vector>
 ; Modified memory : <depends on the vector>
-PRINTCCTRL:
+.proc PRINTCCTRL
     jmp (CTRL_CHR_OUT_VEC)
+.endproc
 
 ; PRINT STRING
 ; Usage : Prints a string to VDP or serial (depends on the current
@@ -58,8 +37,9 @@ PRINTCCTRL:
 ; Modified flag : <depends on the vector>
 ; Modified registers : <depends on the vector>
 ; Modified memory : <depends on the vector>
-PRINTS:
+.proc PRINTS
     jmp (STR_OUT_VEC)
+.endproc 
 
 ; SET CHARACTER
 ; Usage : Set a character on the current cursor XY position but doesnt auto increment cursor X.
@@ -67,8 +47,9 @@ PRINTS:
 ; Modified flag : <depends on the vector>
 ; Modified registers : <depends on the vector>
 ; Modified memory : <depends on the vector>
-SETC:
+.proc SETC
     jmp (CHR_SET_VEC)
+.endproc 
 
 ; GET CHARACTER
 ; Usage : Gets a character.
@@ -76,9 +57,9 @@ SETC:
 ; Modified flag : C, others depends on the vector
 ; Modified registers : A, others depends on the vector
 ; Modified memory : <depends on the vector>
-GETC:
-    jmp (CHAR_IN_VEC)
-
+.proc GETC
+    jmp (CHR_IN_VEC)
+.endproc 
 
 .if .def(TMS9918_VDP)
 ; VIDEO PRINT CHARACTER
@@ -87,7 +68,7 @@ GETC:
 ; Modified flag : ?
 ; Modified registers : None
 ; Modified memory : CURSOR_X, CURSOR_Y, CURSOR_L, CURSOR_H 
-VPRINTC:
+.proc VPRINTC
     pha 
     lda CURSOR_X                ; Otherwise, start printing a character to screen
     cmp SCREEN_WIDTH            ; Has cursor X exceeded screen width?
@@ -105,6 +86,7 @@ no_scroll_up:
     jsr VCHRSET
     inc CURSOR_X
     rts 
+.endproc 
 
 ; VIDEO PRINT CONTROL CHARACTER
 ; Usage : Write a control character to VDP in scroll mode.
@@ -112,7 +94,7 @@ no_scroll_up:
 ; Modified flag : ?
 ; Modified registers : None
 ; Modified memory : CURSOR_X, CURSOR_Y, CURSOR_L, CURSOR_H
-VPRINTCCTRL:
+.proc VPRINTCCTRL
     pha 
     cmp #$0D                    ; Carriage return?
     beq key_return              ; Yes
@@ -129,23 +111,24 @@ key_linefeed:                   ; LF, automatically does CR too
 key_return:                     ; CR
     lda #$00                    ; Cursor go to left
     sta CURSOR_X
-    jmp exit_vprintc
+    jmp exit
 key_backspace:
     lda CURSOR_X                ; Is cursor X 0?
     beq cursor_on_left          ; Yes
     dec CURSOR_X                ; No, decrement cursor X as normal
-    jmp exit_vprintc
+    jmp exit
 cursor_on_left:                 ; cursor on the left
     lda SCREEN_WIDTH
     sec
     sbc #1                      ; Cursor X go to right most side
     sta CURSOR_X                
     lda CURSOR_Y                ; is cursor on the top
-    beq exit_vprintc            ; Yes, do nothing
+    beq exit                    ; Yes, do nothing
     dec CURSOR_Y                ; No, decrement cursor y as normal
-exit_vprintc:
+exit:
     pla 
     rts 
+.endproc 
 .endif
 
 
@@ -159,7 +142,7 @@ exit_vprintc:
 ; Modified flag : ?
 ; Modified registers : ?
 ; Modified memory : ?
-VCHRSET:
+.proc VCHRSET
     pha 
     jsr xy_to_name_addr         ; Convert xy coord to address in name table 
     lda CURSOR_L                ; Setting up VRAM write address
@@ -170,11 +153,12 @@ VCHRSET:
     pla
     sta VDP_RAM                 ; write to vram
     rts
+.endproc 
 .endif  
 
 .if .def(TMS9918_VDP)
 ; Tranlate cursor xy coordinate to nametable address
-xy_to_name_addr:
+.proc xy_to_name_addr
     pha
     txa
     pha 
@@ -190,14 +174,14 @@ xy_to_name_addr:
     inx 
     lda mul_by_32, x            ; Get mul32 result high byte
     sta CURSOR_H
-    jmp exit_xy_to_name         
+    jmp exit        
 screen_width_40:
     lda mul_by_40, x            ; Get mul40 result low byte 
     sta CURSOR_L                
     inx 
     lda mul_by_40, x            ; Get mul40 result high byte
     sta CURSOR_H
-exit_xy_to_name:                ; Add cursor x to result
+exit:                           ; Add cursor x to result
     clc
     lda CURSOR_L
     adc CURSOR_X
@@ -209,11 +193,13 @@ exit_xy_to_name:                ; Add cursor x to result
     tax 
     pla 
     rts
+.endproc 
 .endif 
+
 
 .if .def(TMS9918_VDP)
 ; Scroll up in scroll mode
-vdp_scroll_up:
+.proc vdp_scroll_up
     pha                         
     txa 
     pha
@@ -279,6 +265,7 @@ vdp_addr_goto_next_two_lines:   ; Cursor go to next 2 line
     tax
     pla
     rts
+.endproc 
 .endif
 
 ; Multiplication lookup table
@@ -295,7 +282,7 @@ mul_by_40:
 ; Modified flag : ?
 ; Modified registers : none
 ; Modified memory : none
-VPRINTS:
+.proc VPRINTS
     pha                         ; Save A
     txa                         ; Save X
     pha                         
@@ -319,6 +306,7 @@ VPRINTS:
     tay
     pla 
     rts 
+.endproc 
 .endif
 
 
@@ -330,7 +318,7 @@ VPRINTS:
 ; Modified flag : ?, C
 ; Modified register : A, ZP0
 ; Modified memory : ?
-KBGETC:
+.proc KBGETC
     txa 
     pha 
     sei 
@@ -352,6 +340,7 @@ KBGETC:
     lda ZPR0
     sec                         ; key pressed, set carry
     rts
+.endproc 
 .endif
 
 ; SERIAL SEND C
@@ -360,7 +349,7 @@ KBGETC:
 ; Modified flag : ?
 ; Modified registers : none
 ; Modified memory : none
-SSENDC:
+.proc SSENDC
     .if .def(ACIA_BUG)
     pha 
     sta ACIA_DATA
@@ -369,11 +358,11 @@ SSENDC:
 	sbc #$01
     bne @txdelay
     pla
-.else  
+    .else  
     sta ACIA_DATA 
-.endif
+    .endif
     rts 
-
+.endproc
 
 ; SERIAL PRINT CHARACTER
 ; Usage : Sends a character through serial.
@@ -382,8 +371,8 @@ SSENDC:
 ; Modified flag : ?
 ; Modified registers : none
 ; Modified memory : none
-SPRINTC:
-.if .def(ACIA_BUG)
+.proc SPRINTC
+    .if .def(ACIA_BUG)
     pha
     cmp #$20
     bcs not_ctrl_char
@@ -395,10 +384,11 @@ not_ctrl_char:
 	sbc #$01
     bne @txdelay
     pla
-.else  
+    .else  
     sta ACIA_DATA 
-.endif
+    .endif
     rts 
+.endproc 
 
 ; SERIAL PRINT STRING
 ; Usage : Prints a string through serial.
@@ -407,12 +397,14 @@ not_ctrl_char:
 ; Modified flag : ?
 ; Modified registers : none
 ; Modified memory : none
-SPRINTS:
+.proc SPRINTS
     rts
+.endproc 
 
 ; SERIAL CHARACTER SET 
-SCHRSET:
+.proc SCHRSET
     rts 
+.endproc 
 
 ; SERIAL GET CHARACTER
 ; Usage : get a character from SERIAL, carry flag denotes a 
@@ -421,7 +413,7 @@ SCHRSET:
 ; Modified flag : ?, C
 ; Modified register : A
 ; Modified memory : none
-SGETC:
+.proc SGETC
     txa 
     pha 
     sei 
@@ -444,7 +436,7 @@ SGETC:
     sec                         ; key pressed, set carry
     cli 
     rts
-
+.endproc 
 
 ; ********************************************************
 ; *                   STANDARD LIBRARY                   *
@@ -458,8 +450,9 @@ SGETC:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-MALLOC:
+.proc MALLOC
     rts
+.endproc 
 
 ; FREE MEMORY
 ; Usage: Frees memory
@@ -467,8 +460,9 @@ MALLOC:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-FREE:
+.proc FREE
     rts
+.endproc
 
 ; RANDOM
 ; Usage: Returns a random number
@@ -476,8 +470,9 @@ FREE:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-RAND:
+.proc RAND
     rts
+.endproc 
 
 ; --------------------
 ; -      MATH        -
@@ -488,8 +483,9 @@ RAND:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-INT32_ADD:
+.proc INT32_ADD
     rts
+.endproc 
 
 ; INT32 SUBTRACTION
 ; Usage: 32-bit integer subtraction
@@ -497,8 +493,9 @@ INT32_ADD:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-INT32_SUB:
+.proc INT32_SUB
     rts
+.endproc 
 
 ; IN32 MULTIPLICATION
 ; Usage: 32-bit integer multiplication
@@ -506,8 +503,9 @@ INT32_SUB:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-INT32_MUL:
+.proc INT32_MUL
     rts 
+.endproc 
 
 ; INT32 DIVISION
 ; Usage: 32-bit integer division
@@ -515,8 +513,9 @@ INT32_MUL:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-INT32_DIV:
+.proc INT32_DIV
     rts 
+.endproc 
 
 ; FLOAT ADDITION
 ; Usage: Float addition
@@ -524,8 +523,9 @@ INT32_DIV:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-FLOAT_ADD:
+.proc FLOAT_ADD
     rts
+.endproc 
 
 ; FLOAT SUBTRACTION
 ; Usage: Float subtraction
@@ -533,8 +533,9 @@ FLOAT_ADD:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-FLOAT_SUB:
+.proc FLOAT_SUB
     rts
+.endproc 
 
 ; FLOAT MULTIPLICATION
 ; Usage: Float multiplication
@@ -542,8 +543,9 @@ FLOAT_SUB:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-FLOAT_MUL:
+.proc FLOAT_MUL
     rts 
+.endproc  
 
 ; FLOAT DIVISION
 ; Usage: Float division
@@ -551,8 +553,9 @@ FLOAT_MUL:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-FLOAT_DIV:
+.proc FLOAT_DIV
     rts 
+.endproc 
 
 ; INT32 TO FLOAT CONVERSION
 ; Usage: 32-bit integer to float
@@ -560,8 +563,9 @@ FLOAT_DIV:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-INT32_TO_FLOAT:
+.proc INT32_TO_FLOAT
     rts 
+.endproc 
 
 ; FLOAT TO INT32 CONVERSION
 ; Usage: Float to 32-bit integer
@@ -569,8 +573,9 @@ INT32_TO_FLOAT:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-FLOAT_TO_INT32:
+.proc FLOAT_TO_INT32
     rts 
+.endproc 
 
 ; SQUARE ROOT
 ; Usage: Takes square root of a float
@@ -578,8 +583,9 @@ FLOAT_TO_INT32:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-SQRT:
+.proc SQRT
     rts 
+.endproc 
 
 ; POWER
 ; Usage: Raises a float to the power of a byte
@@ -587,8 +593,9 @@ SQRT:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-POW:
+.proc POW
     rts 
+.endproc 
 
 
 ; --------------------
@@ -601,7 +608,7 @@ POW:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-STR_CMP_CS:
+.proc STR_CMP_CS
     ldy #$00        ;Compare strings, case-sensitive
     lda (STR_PTR),Y     ;Naturally, the zero flag is used to return if the strings are equal
     cmp (STR_PTR1),Y
@@ -621,6 +628,7 @@ str_cmp_loop:
     bne str_cmp_loop
 str_cmp_exit:
     rts
+.endproc 
 
 ; STRING COMPARE CASE NON-SENSITIVE
 ; Usage: Compares two strings (case not sensitive)
@@ -628,8 +636,9 @@ str_cmp_exit:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-STR_CMP_CNS:
+.proc STR_CMP_CNS
     rts
+.endproc 
 
 ; STRING COPY
 ; Usage: Copys a string to another location
@@ -637,8 +646,9 @@ STR_CMP_CNS:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-STR_CPY:
+.proc STR_CPY
     rts 
+.endproc 
 
 ; STRING TO INT
 ; Usage: Converts string to integer
@@ -646,8 +656,9 @@ STR_CPY:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-ATOI:
+.proc ATOI
     rts 
+.endproc 
 
 ; INT TO STRING
 ; Usage: Converts integer to string 
@@ -655,8 +666,9 @@ ATOI:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-ITOA:
+.proc ITOA
     rts 
+.endproc 
 
 ; STRING TO FLOAT
 ; Usage: Converts string to float
@@ -664,8 +676,9 @@ ITOA:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-ATOF:
+.proc ATOF
     rts
+.endproc 
 
 ; FLOAT TO STRING
 ; Usage: Converts float to integer
@@ -673,10 +686,92 @@ ATOF:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-FTOA:
+.proc FTOA
     rts
+.endproc 
 
-; 
+;HEX STRING TO VALUE
+.proc ATOH
+    tya 
+    pha 
+    txa 
+    pha 
+    ldy #$00
+    lda (STR_PTR),Y                 ; Get character fror hex test
+    eor #$30                        ; Mao digit to $0-9
+    bcc is_digit                    ; Digit?
+    adc #$88                        ; Map letter "A"-"F" to $FA-$FF
+    cmp #$FA                        ; Is upper-case hex?
+    bcs is_digit                    ; Yes
+    adc #$20                        ; Map letter "a"-"f" to $FA-$FF
+    cmp #$FA                        ; Is lower-case hex?
+    bcs is_digit                    ; Yes
+    jmp error_exit                  ; Otherwise return with error
+is_digit:
+    asl A                           ; Hex digit to MSD
+    asl A 
+    asl A 
+    asl A 
+
+error_exit:
+    clc
+    pla 
+    tax 
+    pla 
+    tay 
+    rts 
+.endproc
+
+;HEX VALUE TO STRING
+.proc HTOA
+    pha 
+    txa                             ; Save X
+    pha             
+    tya                             ; Save Y, Y is the string index
+    pha 
+    ldy #$00
+    lda #8
+    sta RET_STR
+loop:
+    cpy #9
+    beq exit
+    clc 
+    lda ARG0_VAL + 3                ; Put bit 31 into carry
+    rol A
+    sec 
+
+msb_no_carry:
+    ldx #$04                        ; rotate count
+shift4:
+    rol ARG0_VAL
+    rol ARG0_VAL + 1
+    rol ARG0_VAL + 2
+    rol ARG0_VAL + 3
+    dex 
+    bne shift4                      ; rotated 4 times?
+
+    iny                             ; next character
+    lda ARG0_VAL
+    jsr prhex
+    jmp loop
+exit:
+    pla 
+    tay 
+    pla 
+    tax 
+    pla 
+    rts 
+
+prhex:
+    and #$0F                    ; Mask LSD for hex
+    ora #$30                    ; add '0'
+    cmp #$3A                    ; Is digit?
+    bcc str_chr                 ; Yes, store to string
+    adc #$06                    ; Add offset for letter
+str_chr:
+    sta RET_STR,Y 
+    rts 
+.endproc
 
 ; --------------------
 ; -      TIME        -
@@ -688,7 +783,7 @@ FTOA:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : ZPR0
-SLEEPSEC:
+.proc SLEEPSEC
     sta ZPR0                    ; How many seconds to pass?
     pha 
     txa 
@@ -701,7 +796,8 @@ SLEEPSEC:
     pla 
     tax 
     pla 
-    rts 
+    rts
+.endproc  
 
 ; SLEEP IN MILLISECONDS
 ; Usage: Halts the processor
@@ -709,7 +805,7 @@ SLEEPSEC:
 ; Modified flag :
 ; Modified register : 
 ; Modifies memory : 
-SLEEPMILLISEC:
+.proc SLEEPMILLISEC
     sta ZPR0                    ; How many seconds to pass?
 
     pha 
@@ -724,6 +820,7 @@ SLEEPMILLISEC:
     tax 
     pla 
     rts 
+.endproc 
 
 ; ********************************************************
 ; *           DEFAULT INTERRUPT SERVICE ROUTINE          *
@@ -735,14 +832,14 @@ SLEEPMILLISEC:
 ; Modified flag : None
 ; Modified register : None
 ; Modifies memory : KB_BUF, KB_FLAG, KB_RPTR, KB_WPTR
-KB_ISR:
+.proc KB_ISR
     pha 
     txa 
     pha 
 
     lda IFR 
     and #IFR_CA1                ; Did CA1(keyboard) cause the interrupt?
-    beq exit_kbisr              ; No, exits.
+    beq exit                    ; No, exits.
                                 ; Otherwise, start processing key input
     lda KB_FLAG                 ; Read keyboard flag
     and #RELEASED               ; Check if releaseing a key
@@ -755,13 +852,13 @@ KB_ISR:
     beq shift_up                ; Yes
     cmp #$59                    ; Is right shift being released?
     beq shift_up                ; Yes
-    jmp exit_kbisr              ; Otherwise, ignores released key
+    jmp exit                    ; Otherwise, ignores released key
 
 shift_up:                       ; Shift key is released. Flips the shift flag
     lda KB_FLAG
     eor #SHIFT
     sta KB_FLAG
-    jmp exit_kbisr
+    jmp exit 
 
 ; Getting the corresponding ascii character
 read_key:
@@ -788,23 +885,24 @@ push_key:                       ; Normal ascii
     ldx KB_WPTR
     sta KB_BUF, x               ; Put it in the buffer
     inc KB_WPTR
-    jmp exit_kbisr
+    jmp exit
 
 shift_down:                     ; Shift is pressed
     lda KB_FLAG
     ora #SHIFT                  ; set shift flag
     sta KB_FLAG
-    jmp exit_kbisr
+    jmp exit
 
 key_release:                    ; Key is released
     lda KB_FLAG
     ora #RELEASED               ; set released flag
     sta KB_FLAG
-exit_kbisr:
+exit:
     pla 
     tax 
     pla 
     rts 
+.endproc 
 
 keymap:
     .byte "????????????? `?" ; 00-0f
@@ -846,24 +944,25 @@ keymap_shifted:
 
 ; SERIAL INTERRUPT SERVICE ROUTINE
 ; Usage: Processes interrupt caused by the ACIA
-SER_ISR:
+.proc SER_ISR
     pha
     txa 
     pha 
 
     lda ACIA_STATUS
     and #ACIA_STAT_INT                  ; ACIA caused the interrupt?
-    beq exit_serisr                     ; No, skips
+    beq exit                            ; No, skips
     lda ACIA_DATA
     ldx SER_WPTR
     sta SER_BUF, X
     inc SER_WPTR
 
-exit_serisr:
+exit:
     pla 
     tax
     pla 
     rts 
+.endproc 
 
 ISR0:
     jmp (ISR_VEC0)

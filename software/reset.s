@@ -190,14 +190,14 @@ clean_loop1:
 ; Input vectors
 .if .def(KEYBOARD)
     lda #<KBGETC
-    sta CHAR_IN_VEC
+    sta CHR_IN_VEC
     lda #>KBGETC
-    sta CHAR_IN_VEC + 1
+    sta CHR_IN_VEC + 1
 .else 
     lda #<SGETC
-    sta CHAR_IN_VEC
+    sta CHR_IN_VEC
     lda #>SGETC
-    sta CHAR_IN_VEC + 1
+    sta CHR_IN_VEC + 1
 .endif
 
 ; IRQ routine vectors

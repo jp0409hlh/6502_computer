@@ -49,7 +49,6 @@ SHELL_NAME_VER:     PString "JP6502 OS v0.0.1"
 SHELL_CMD_NOT_FND:      PString "CMD NOT FOUND"
 SHELL_CMD:          
         Cmd "clr"  
-        Cmd "dump" 
         Cmd "help" 
         Cmd "info" 
         Cmd "mon"  
@@ -63,8 +62,7 @@ SHELL_CMD:
         .byte $00
         
 SHELL_CMD_ADDR:                 ; RTS style jump table
-        .word CMD_CLR - 1   ; clear screen
-        .word CMD_DUMP -1   ; hexdump memory
+        .word CMD_CLR - 1  ; clear screen
         .word CMD_HELP -1  ; help
         .word CMD_INFO -1  ; information
         .word CMD_MON  -1  ; enter monitor
@@ -74,7 +72,7 @@ SHELL_CMD_ADDR:                 ; RTS style jump table
         .word CMD_RST  -1  ; resets the system
         .word CMD_COL  -1  ; Changes color of the terminal
         .word CMD_ASM  -1  ; Enters assmenbly editor
-        .word CMD_RX -1    ; Load program from serial
+        .word CMD_RX   -1  ; Load program from serial
 SHELL_START:
 ; TODO : memory check, VDP check
 ; TODO : Serial only shell?
@@ -83,43 +81,43 @@ SHELL_START:
         putchar #'@'
         putchar #' '
         lda #'_'
-        jsr SETC                                        ; Setup cursor
+        jsr SETC                        ; Setup cursor
         lda #$00
-        sta KB_RPTR                                     ; Reset read write pointer
+        sta KB_RPTR                     ; Reset read write pointer
         sta KB_WPTR
         sta READ_PTR
         sta READ_END_PTR
 
-        lda #'H'                                        ; debug purpose
+        lda #'H'                        ; debug purpose
         sta ACIA_DATA
         cli 
 SHELL_LOOP:
-        jsr GETC                                        ; Get character. Carry set if new key, otherwise no.
-        bcc SHELL_LOOP                                  ; New key input? Carry set yes, otherwise no.
-        cmp #$08                                        ; Backspace?
+        jsr GETC                        ; Get character. Carry set if new key, otherwise no.
+        bcc SHELL_LOOP                  ; New key input? Carry set yes, otherwise no.
+        cmp #$08                        ; Backspace?
         beq input_backspace
-        cmp #$0A                                        ; Is the key LF? (i.e. is enter pressed?)
+        cmp #$0A                        ; Is the key LF? (i.e. is enter pressed?)
         beq input_line_feed
-        jsr PRINTC                                      ; Echo the key to the output 
+        jsr PRINTC                      ; Echo the key to the output 
         lda #'_'
         jsr SETC
-        jmp SHELL_LOOP                                  ; Keep getting characters
-input_backspace:                                        ; Processing backspace.
+        jmp SHELL_LOOP                  ; Keep getting characters
+input_backspace:                        ; Processing backspace.
         sei 
         lda KB_WPTR
-        beq SHELL_LOOP                                  ; Write pointer == 0, cant backspace further.
+        beq SHELL_LOOP                  ; Write pointer == 0, cant backspace further.
         dec KB_WPTR
         dec KB_RPTR
         cli 
         jmp SHELL_LOOP
 
-input_line_feed:                                        ; LF pressed(aka Enter key). Start comparing input string to commands
+input_line_feed:                        ; LF pressed(aka Enter key). Start comparing input string to commands
         sei    
         jsr PRINTCCTRL                                         
         lda KB_WPTR
         sta READ_END_PTR
-        ldy #$FF                                        ; Set Y to 0 as command line starts at buffer index 0 (here sets $FF because of future iny)
-        ldx #$00                                        ; X indicates which command is matched
+        ldy #$FF                        ; Set Y to 0 as command line starts at buffer index 0 (here sets $FF because of future iny)
+        ldx #$00                        ; X indicates which command is matched
 
         lda #<SHELL_CMD
         sta CMD_PTR
@@ -130,11 +128,11 @@ command_compare_loop:
         iny 
         sec 
         lda (CMD_PTR), Y 
-        sbc KB_BUF, Y                                   ; do (CMD_PTR),Y minus KB_BUF
-        beq command_compare_loop                        ; If result zero keep comparing
-        cmp #%10000000                                  ; If two char are only off by bit 7, check if KB_BUF next char is space or LF
+        sbc KB_BUF, Y                   ; do (CMD_PTR),Y minus KB_BUF
+        beq command_compare_loop        ; If result zero keep comparing
+        cmp #%10000000                  ; If two char are only off by bit 7, check if KB_BUF next char is space or LF
         beq check_next_space_LF
-        jmp current_compare_not_match                   ; Character not match
+        jmp current_compare_not_match   ; Character not match
 
 check_next_space_LF:
         iny 
@@ -148,7 +146,7 @@ current_compare_not_match:
         txa 
         pha 
         ldx #0
-@loop:                                                  ; Keep incrementing CMD_PTR until char bit 7 is 1
+@loop:                                  ; Keep incrementing CMD_PTR until char bit 7 is 1
         inc16 CMD_PTR
         lda (CMD_PTR,X)
         bpl @loop 
@@ -172,7 +170,7 @@ current_compare_match:
         lda SHELL_CMD_ADDR, x 
         pha 
         cli 
-        rts                                             ; Get the Xs command and do a RTS jump
+        rts                             ; Get the Xs command and do a RTS jump
         
 no_command_found:
         pla 
@@ -203,29 +201,30 @@ not_line_feed:
 
 ; ASSEMBLER
 ; Built-in assembler and disassembler
-CMD_ASM:
+.proc CMD_ASM
         jmp input_process_done
+.endproc 
 
 
-CMD_CARD:
+.proc CMD_CARD
         jmp input_process_done
+.endproc 
 
-
-CMD_CLR:
+.proc CMD_CLR
         lda #$00
         sta VDP_REG
         lda #($00 | $40)
         sta VDP_REG
         ldy #25
-cmd_clr_loop:
+loop:
         ldx SCREEN_WIDTH
-cmd_clr_loop1:
-        lda #' '                            ; Space
+loop1:
+        lda #' '                        ; Space
         sta VDP_RAM
         dex
-        bne cmd_clr_loop1
+        bne loop1
         dey
-        bne cmd_clr_loop
+        bne loop
  
         lda #$00
         sta CURSOR_X
@@ -236,84 +235,101 @@ cmd_clr_loop1:
         ora #$40
         sta VDP_REG
         jmp input_process_done
+.endproc 
 
-
-CMD_COL:
+; COLOR
+; Changes terminal color
+; !!! TODO !!! : what will this be in serial mode?
+.proc CMD_COL
         ldx #$FE 
-cmd_col_get_arg:
-        iny                                     ; get argument
+get_arg:
+        iny                             ; get argument
         lda KB_BUF, Y 
-        eor #$30                                ; Map char '0'-'9' to $0-9
-        cmp #$0A                                ; Is digit?
-        bcc cmd_col_is_digit                    ; Yes
-        adc #$A8                                ; Map char 'a'-'f' to $FA-$FF
-        cmp #$FA                                ; Is Hex char?
-        bcc cmd_col_arg_err                     ; No
+        eor #$30                        ; Map char '0'-'9' to $0-9
+        cmp #$0A                        ; Is digit?
+        bcc is_digit                    ; Yes
+        adc #$A8                        ; Map char 'a'-'f' to $FA-$FF
+        cmp #$FA                        ; Is Hex char?
+        bcc arg_err                     ; No
         sec 
         sbc #$F0
-cmd_col_is_digit:
-cmd_col_shift_msd:
+is_digit:
+shift_msd:
         inx 
-        beq cmd_col_get_arg_done
+        beq get_arg_done
         asl A 
         asl A 
         asl A 
         asl A 
         sta ZPR0
-        jmp cmd_col_get_arg
-cmd_col_get_arg_done:
+        jmp get_arg
+get_arg_done:
         clc 
         adc ZPR0
         sta VDP_REG
         lda #VDP_REG7
         sta VDP_REG
         jmp input_process_done
-cmd_col_arg_err:
-        printIm cmd_col_arg_err_msg
-cmd_col_return:
+arg_err:
+        printIm arg_err_msg
+return:
         jmp input_process_done
 
-cmd_col_arg_err_msg: PString "ARG ERR"
+arg_err_msg: PString "ARG ERR"
+.endproc 
 
 
-CMD_DUMP:
+; HELP
+; Lists avaliable commands
+.proc CMD_HELP
+        lda #$AB
+        sta ARG0_VAL
+        lda #$AB
+        sta ARG0_VAL + 1
+        lda #$AB 
+        sta ARG0_VAL + 2
+        lda #$AB
+        sta ARG0_VAL + 3
+        jsr HTOA
+        printIm RET_STR
         jmp input_process_done
+.endproc 
 
 
-CMD_HELP:
+; INFORMATION
+; Prints system information
+.proc CMD_INFO
         jmp input_process_done
+.endproc 
 
 
-CMD_INFO:
-        jmp input_process_done
-
-
+; RECEIVE
 ; LOAD PROGRAM FROM SERIAL (XMODEM)
-CMD_RX:
-        printIm cmd_rx_listening_msg
-        lda #<RAM_START                                 ; Setup pointer for loading byte
-        sta LOAD_PTR                                    ; as well as the previous pointer
+.proc CMD_RX
+        printIm listening_msg
+        lda #<RAM_START                 ; Setup pointer for loading byte
+        sta LOAD_PTR                    ; as well as the previous pointer
         sta LAST_LOAD_PTR
         lda #>RAM_START
         sta LOAD_PTR + 1
         sta LAST_LOAD_PTR + 1
-        ldx #$00                                                ; Set previous blknum to 0
+        ldx #$00                        ; Set previous blknum to 0
         stx LAST_BLK_NUM
         stx ZPR3
-cmd_rx_start:
-        printIm cmd_rx_send_NAK_msg
-        lda #NAK                                                ; Send NAK
+start:
+        printIm send_NAK_msg
+        lda #NAK                        ; Send NAK
         jsr SSENDC
-        lda #$0A                                                ; New line
+        lda #$0A                        ; New line
         jsr PRINTCCTRL
 get_SOH_loop:
         jsr SGETC
         bcc get_SOH_loop
-        cmp #SOH                                                ; Got SOH?
-        beq received_SOH                                        ; Yes
-        cmp #EOT                                                ; Got EOT?
-        beq end_of_transfer                                     ; Yes, end of transfer
-        jmp get_SOH_loop                                        ; Otherwise, keep listening
+        cmp #SOH                        ; Got SOH?
+        beq received_SOH                ; Yes
+        cmp #EOT                        ; Got EOT?
+        beq end_of_transfer             ; Yes, end of transfer
+        jmp get_SOH_loop                ; Otherwise, keep listening
 end_of_transfer:
         jmp transfer_done
 dup_transfer:
@@ -322,80 +338,79 @@ dup_transfer:
         jmp get_SOH_loop
 received_SOH:
 get_blknum:
-        printIm cmd_rx_got_SOH_msg
+        printIm got_SOH_msg
         jsr SGETC
-        bcc get_blknum                                          ; Got block number?
-        cmp LAST_BLK_NUM                                        ; Is it the same as the previous?
-        beq send_ACK                                            ; Yes, duplicate block, send ACK
-        sta ZPR3                                                ; Temporarily save block number to ZPR3
-        printIm cmd_rx_got_blk_num_msg
+        bcc get_blknum                   ; Got block number?
+        cmp LAST_BLK_NUM                 ; Is it the same as the previous?
+        beq send_ACK                     ; Yes, duplicate block, send ACK
+        sta ZPR3                         ; Temporarily save block number to ZPR3
+        printIm got_blk_num_msg
 get_inv_blknum:
         jsr SGETC
-        bcc get_inv_blknum                                      ; Got inverse block number?
+        bcc get_inv_blknum               ; Got inverse block number?
         clc 
-        adc ZPR3                                                ; Add it with block number
-        cmp #$FF                                                ; Is it 255?
-        bne cmd_rx_start                                        ; No, send NAK and retry
-        printIm cmd_rx_got_inv_blk_num_cor
-                                                                ; Otherwise start receiving packet data
+        adc ZPR3                         ; Add it with block number
+        cmp #$FF                         ; Is it 255?
+        bne start                        ; No, send NAK and retry
+        printIm got_inv_blk_num_cor
+                                         ; Otherwise start receiving packet data
         ldy #128
-        stx ZPR2                                                ; Initialize chksum result to 0
+        stx ZPR2                         ; Initialize chksum result to 0
 get_packet_data_loop:
 get_packet_data:
         jsr SGETC
-        bcc get_packet_data                                     ; Got data?
-        sta (LOAD_PTR,X)                                        ; Store it to (LOAD_PTR + 0)
+        bcc get_packet_data               ; Got data?
+        sta (LOAD_PTR,X)                  ; Store it to (LOAD_PTR + 0)
         clc 
-        adc ZPR2                                                ; Add to chksum
+        adc ZPR2                          ; Add to chksum
         sta ZPR2
-        inc16 LOAD_PTR                                          ; Increment LOAD_PTR
+        inc16 LOAD_PTR                    ; Increment LOAD_PTR
         dey                     
-        bne get_packet_data_loop                                ; End of 128 byte transfer?
+        bne get_packet_data_loop          ; End of 128 byte transfer?
 
 get_chk_sum:
         jsr SGETC
-        bcc get_chk_sum                                         ; Get chksum from transeiver
-        cmp ZPR2                                                ; Is it correct?
-        beq chk_sum_correct                                     ; Yes
-        printIm cmd_rx_chksum_error
-        lda LAST_LOAD_PTR                                       ; Otherwise, restore LOAD_PTR and try again
+        bcc get_chk_sum                   ; Get chksum from transeiver
+        cmp ZPR2                          ; Is it correct?
+        beq chk_sum_correct               ; Yes
+        printIm chksum_error
+        lda LAST_LOAD_PTR                 ; Otherwise, restore LOAD_PTR and try again
         sta LOAD_PTR
         lda LAST_LOAD_PTR + 1
         sta LOAD_PTR + 1
-        jmp cmd_rx_start
-send_ACK:                                                       ; All correct, send ACK
+        jmp start
+send_ACK:                                 ; All correct, send ACK
 chk_sum_correct:
-        lda #ACK                                                ; Send ACK
+        lda #ACK                          ; Send ACK
         jsr SSENDC
-        printIm cmd_rx_send_ACK_msg
-        inc LAST_BLK_NUM                                        ; Increment previous block number
-        lda LOAD_PTR                                            ; LAST_LOAD_PTR = LOAD_PTR
+        printIm send_ACK_msg
+        inc LAST_BLK_NUM                  ; Increment previous block number
+        lda LOAD_PTR                      ; LAST_LOAD_PTR = LOAD_PTR
         sta LAST_LOAD_PTR
         lda LOAD_PTR + 1
         sta LAST_LOAD_PTR + 1
-        jmp get_SOH_loop                                        ; Get the next packet
+        jmp get_SOH_loop                  ; Get the next packet
 transfer_done:
-        lda #ACK                                                ; Send ACK
+        lda #ACK                          ; Send ACK
         jsr SSENDC
         lda #$0A
         jsr PRINTCCTRL
-        printIm cmd_rx_end_of_transfer_msg
+        printIm end_of_transfer_msg
         jmp input_process_done
 
-cmd_rx_listening_msg: PString "Listening..."
-cmd_rx_send_NAK_msg: PString "NAK->/"
-cmd_rx_send_ACK_msg: PString "ACK->/"
-cmd_rx_got_SOH_msg: PString "<-SOH/"
-cmd_rx_got_blk_num_msg: PString "<-blknum/ "
-cmd_rx_got_inv_blk_num_cor: PString "[blknum ok]"
-cmd_rx_chksum_error: PString "!chksum err!"
-cmd_rx_end_of_transfer_msg: PString "Ready"
+listening_msg: PString "Listening..."
+send_NAK_msg: PString "NAK->/"
+send_ACK_msg: PString "ACK->/"
+got_SOH_msg: PString "<-SOH/"
+got_blk_num_msg: PString "<-blknum/ "
+got_inv_blk_num_cor: PString "[blknum ok]"
+chksum_error: PString "!chksum err!"
+end_of_transfer_msg: PString "Ready"
+.endproc 
 
 ; MONITOR
-; Orginally written by Steve Wozniak
-exit_mon1:
-        jmp exit_mon
-CMD_MON:
+; wozmon style monitor, orginally written by Steve Wozniak
+.proc CMD_MON
         iny 
         lda KB_BUF, Y 
         cmp #' '
@@ -404,142 +419,153 @@ wozmon_starts:
         dey 
         lda #$00                        ; For XAM mode
         tax                             ; X = 0
-cmd_mon_setblock:
+setblock:
         asl 
-cmd_mon_setstor:
+setstor:
         asl                             ; Leaves $7B if STOR mode
         sta MON_MODE
-cmd_mon_blskip:
+blskip:
         iny                             ; Next character
-cmd_mon_nextitem:
+nextitem:
         lda KB_BUF, Y                   ; Get character
         cmp #$0A                        ; LF?
         beq exit_mon1                   ; Yes, exits
         cmp #'.'                        ; "."?
-        bcc cmd_mon_blskip              ; skips delimeter
-        beq cmd_mon_setblock            ; Set BLOCK XAM mode
+        bcc blskip                      ; skips delimeter
+        beq setblock                    ; Set BLOCK XAM mode
         cmp #':'                        ; ":"?
-        beq cmd_mon_setstor             ; Set STOR mode
+        beq setstor                     ; Set STOR mode
         cmp #'r'                        ; "r"?
-        beq cmd_mon_run                 ; Run user program
+        beq run                         ; Run user program
         stx MON_L                       ; $00->L
         stx MON_H                       ; $00->H
         sty MON_YSAV                    ; Saves Y
 
-cmd_mon_nexthex:
+nexthex:
         lda KB_BUF, Y                   ; Get character for hex test
         eor #$30                        ; Map digits to $0-9
         cmp #$0A                        ; Digit?
-        bcc cmd_mon_is_digit            ; Yes 
+        bcc is_digit                    ; Yes 
         adc #$A8                        ; Map letter "a"-"f" to $FA-FF
         cmp #$FA                        ; Hex letter?
-        bcc cmd_mon_nothex              ; character not hex
-cmd_mon_is_digit:
+        bcc nothex                      ; character not hex
+is_digit:
         asl A                           ; Hex digit to MSD
         asl A 
         asl A 
         asl A
 
         ldx #$04                        ; Shift count
-cmd_mon_hexshift:
+hexshift:
         asl A                           ; Hex digit left, MSB to carry
         rol MON_L                       ; Rotate into LSD
         rol MON_H                       ; Rotate into MSD
         dex                             ; Done 4 shifts?
-        bne cmd_mon_hexshift            ; No, keep looping
+        bne hexshift                    ; No, keep looping
         iny                             ; Next character
-        bne cmd_mon_nexthex             ; jmp to check next hex character
+        bne nexthex                     ; jmp to check next hex character
 
-cmd_mon_nothex:
+nothex:
         cpy MON_YSAV                    ; Check if L, H empty (no hex digits)
-        beq exit_mon                    ; Yes, exits
+        beq exit                        ; Yes, exits
 
         bit MON_MODE                    ; Test MODE
-        bvc cmd_mon_notstor             ; Bit-6 = 0 is STOR, 1 is XAM and BLOCK XAM
+        bvc notstor                     ; Bit-6 = 0 is STOR, 1 is XAM and BLOCK XAM
 
         lda MON_L                       ; LSD's of hex data
         sta (MON_STL,X)                 ; Store current 'store index'
         inc MON_STL                     ; Increment store index
-        bne cmd_mon_nextitem            ; Get next item (no carry)
+        bne nextitem                    ; Get next item (no carry)
         inc MON_STH                     ; Add carry to 'store index' high order
-cmd_mon_tonextitem:
-        jmp cmd_mon_nextitem            ; Get next command item
+tonextitem:
+        jmp nextitem                    ; Get next command item
 
-cmd_mon_run:
+exit_mon1:
+        jmp exit
+
+run:
         jmp (MON_XAML)                  ; Run at current XAM index
 
-cmd_mon_notstor:
-        bmi cmd_mon_xamnext             ; Bit-7 = 0 for XAM, 1 for BLOCK XAM
+notstor:
+        bmi xamnext                     ; Bit-7 = 0 for XAM, 1 for BLOCK XAM
 
         ldx #$02                        ; Byte count
-cmd_mon_setadr:
+setadr:
         lda MON_L-1, X                  ; Copy hex data to
         sta MON_STL-1, X                ;  'store index'
         sta MON_XAML-1, X               ;  and to 'XAM index'
         dex 
-        bne cmd_mon_setadr              ; Loop until X = 0
+        bne setadr                      ; Loop until X = 0
 
-cmd_mon_nxtprnt:
-        bne cmd_mon_prdata              ; Not equal means no address to print
+nxtprnt:
+        bne prdata                      ; Not equal means no address to print
         putctrlchar #$0A                ; Print linefeed
         lda MON_XAMH                    ; Get data byte at 'XAM index'
-        jsr cmd_mon_prbyte              ; Output it in hex format
+        jsr prbyte                      ; Output it in hex format
         lda MON_XAML                    ; Low-order 'XAM index' byte
-        jsr cmd_mon_prbyte              ; Output it in hex format
+        jsr prbyte                      ; Output it in hex format
         putchar #':'
-cmd_mon_prdata:
+prdata:
         putchar #' '                    ; Blank
         lda (MON_XAML,X)                ; Get data byte at 'XAM index'
-        jsr cmd_mon_prbyte
-cmd_mon_xamnext:
+        jsr prbyte
+xamnext:
         stx MON_MODE                    ; 0->MODE (XAM mode)
         lda MON_XAML
         cmp MON_L                       ; Compare 'XAM index' to hex data
         lda MON_XAMH                    
         sbc MON_H
-        bcs cmd_mon_tonextitem          ; Not less, so no more data to output
+        bcs tonextitem                  ; Not less, so no more data to output
 
         inc MON_XAML
-        bne cmd_mon_mod8chk             ; Increment 'XAM index'
+        bne mod8chk                     ; Increment 'XAM index'
         inc MON_XAMH
 
-cmd_mon_mod8chk:
+mod8chk:
         lda MON_XAML                    ; Check low-order 'XAM index' byte
         and #$07                        ; For MOD 8 = 0
-        bpl cmd_mon_nxtprnt             ; Always taken
+        bpl nxtprnt                     ; Always taken
 
-cmd_mon_prbyte:
+prbyte:
         pha                             ; Save A for LSD
         lsr A                           ; MSD to LSD position
         lsr A 
         lsr A 
         lsr A
-        jsr cmd_mon_prhex               ; Output hex digit
+        jsr prhex                       ; Output hex digit
         pla                             ; Restore A
-
-cmd_mon_prhex:
+prhex:
         and #$0F                        ; Mask LSD for hex print
         ora #$30                        ; Add "0"
         cmp #$3A                        ; Digit?
-        bcc cmd_mon_echo                ; Yes, output it
+        bcc echo                        ; Yes, output it
         adc #$06                        ; Add offset for letter
-cmd_mon_echo:
+echo:
         jsr PRINTC
         rts 
-exit_mon:
+exit:
         jmp input_process_done
+.endproc 
 
 
-CMD_RST:
+; RESET 
+; Soft resets the system
+.proc CMD_RST
         jmp RESET
+.endproc 
 
 
-CMD_RUN:
+
+.proc CMD_RUN
         jsr RAM_START
         jmp input_process_done
+.endproc 
 
 
-CMD_SER:
+
+; SERIAL 
+; Configures serial things 
+.proc CMD_SER
         ldx #$00
 @loop:
         lda msg,x
@@ -550,3 +576,4 @@ CMD_SER:
 ok: 
         jmp input_process_done
 msg:    .asciiz "HELLO WORLD"
+.endproc 

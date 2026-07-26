@@ -143,13 +143,17 @@ SER_BUF : .res 256                          ; serial signal buffer, 256 bytes
 KB_BUF : .res 256                           ; keyboard input buffer, 256 bytes 
 IN_BUF : .res 256                           ; Gerneral input buffer
 SCROLL_BUF : .res 41                        ; buffer to store a line during scrolling , 41 bytes 
+RET_STR : .res 213                          ; A buffer to store string returned by subroutines
+ARG0_VAL : .res 4                           ; 32-bit argument buffer
+ARG1_VAL : .res 4                           ; 32-bit argument buffer
+RET_VAL : .res 4                            ; 32-bit value return 
 
 ; IO routine vectors
 CHR_OUT_VEC : .res 2                        ; Scroll mode character out vector (default : PRINTC)
 CTRL_CHR_OUT_VEC : .res 2                   ; Scroll mode control character out vector
 STR_OUT_VEC : .res 2                        ; Scroll mode string out vector (default : PRINTS)
 CHR_SET_VEC : .res 2                        ; Character set vector (default SETC)
-CHAR_IN_VEC : .res 2                        ; key in vector 
+CHR_IN_VEC : .res 2                        ; key in vector 
 
 ; Command routine vectors
 CMD_ASM_VEC: .res 2
