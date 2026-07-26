@@ -729,31 +729,57 @@ error_exit:
     pha             
     tya                             ; Save Y, Y is the string index
     pha 
+
     ldy #$00
-    lda #8
+    lda #8 
     sta RET_STR
-loop:
-    cpy #9
-    beq exit
-    clc 
-    lda ARG0_VAL + 3                ; Put bit 31 into carry
-    rol A
-    sec 
-
-msb_no_carry:
-    ldx #$04                        ; rotate count
-shift4:
-    rol ARG0_VAL
-    rol ARG0_VAL + 1
-    rol ARG0_VAL + 2
-    rol ARG0_VAL + 3
-    dex 
-    bne shift4                      ; rotated 4 times?
-
-    iny                             ; next character
-    lda ARG0_VAL
+    iny 
+    lda ARG0_VAL + 3
+    pha 
+    lsr A 
+    lsr A 
+    lsr A 
+    lsr A 
     jsr prhex
-    jmp loop
+    pla 
+    iny 
+    jsr prhex 
+
+    iny 
+    lda ARG0_VAL + 2
+    pha 
+    lsr A 
+    lsr A 
+    lsr A 
+    lsr A 
+    jsr prhex
+    pla 
+    iny 
+    jsr prhex 
+
+    iny 
+    lda ARG0_VAL + 1
+    pha 
+    lsr A 
+    lsr A 
+    lsr A 
+    lsr A 
+    jsr prhex
+    pla 
+    iny 
+    jsr prhex 
+
+    iny 
+    lda ARG0_VAL
+    pha 
+    lsr A 
+    lsr A 
+    lsr A 
+    lsr A 
+    jsr prhex
+    pla 
+    iny 
+    jsr prhex 
 exit:
     pla 
     tay 
@@ -782,7 +808,7 @@ str_chr:
 ; How to use:
 ; Modified flag :
 ; Modified register : 
-; Modifies memory : ZPR0
+; Modified memory : ZPR0
 .proc SLEEPSEC
     sta ZPR0                    ; How many seconds to pass?
     pha 
@@ -804,7 +830,7 @@ str_chr:
 ; How to use:
 ; Modified flag :
 ; Modified register : 
-; Modifies memory : 
+; Modified memory : 
 .proc SLEEPMILLISEC
     sta ZPR0                    ; How many seconds to pass?
 
@@ -831,7 +857,7 @@ str_chr:
 ; Usage: Puts the key into KB_BUF
 ; Modified flag : None
 ; Modified register : None
-; Modifies memory : KB_BUF, KB_FLAG, KB_RPTR, KB_WPTR
+; Modified memory : KB_BUF, KB_FLAG, KB_RPTR, KB_WPTR
 .proc KB_ISR
     pha 
     txa 
