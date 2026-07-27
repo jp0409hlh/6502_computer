@@ -191,9 +191,11 @@ ISR_VEC15 : .res 2
 LAST_LOAD_PTR : .res 2
 LAST_BLK_NUM : .res 1
 
+; assembler stuff
+ASM_CUR_LINE : .res 2        ; Current editing line number
 
 
 RAM_START = $0800
 
-
+SOURCE_START = $5000        ; Start of the assembler editor source
 

@@ -697,9 +697,20 @@ str_cmp_exit:
     txa 
     pha 
     ldy #$00
+    sty RET_VAL
+    sty RET_VAL + 1
+    sty RET_VAL + 2
+    sty RET_VAL + 3
+loop:
+    ldx #0
+    tya 
+    cmp (STR_PTR,X)                 ; Compare to length
+    beq exit
+    iny
     lda (STR_PTR),Y                 ; Get character fror hex test
-    eor #$30                        ; Mao digit to $0-9
-    bcc is_digit                    ; Digit?
+    eor #$30                        ; Map digit to $0-9
+    cmp #$0A                        ; Digit?
+    bcc is_digit                    ; Yes
     adc #$88                        ; Map letter "A"-"F" to $FA-$FF
     cmp #$FA                        ; Is upper-case hex?
     bcs is_digit                    ; Yes
@@ -708,13 +719,25 @@ str_cmp_exit:
     bcs is_digit                    ; Yes
     jmp error_exit                  ; Otherwise return with error
 is_digit:
-    asl A                           ; Hex digit to MSD
-    asl A 
-    asl A 
-    asl A 
+    ldx #4
+hexshift:
+    asl RET_VAL
+    rol RET_VAL + 1 
+    rol RET_VAL + 2
+    rol RET_VAL + 3
+    dex
+    bne hexshift
+    and #$0F
+    ora RET_VAL
+    sta RET_VAL
+    jmp loop
+exit:
+    sec 
+    jmp pull
 
 error_exit:
     clc
+pull:
     pla 
     tax 
     pla 
