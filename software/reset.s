@@ -258,6 +258,12 @@ clean_loop1:
     sta ISR_VEC1 + 1
 
 
+    lda #$00
+    sta ASM_MODE
+    sta ASM_CUR_LINE + 1
+    lda #1
+    sta ASM_CUR_LINE
+
     cli 
     jmp SHELL_START
 

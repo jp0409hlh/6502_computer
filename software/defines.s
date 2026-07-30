@@ -133,8 +133,9 @@ LOAD_PTR : .res 2
 
 STACK2_PTR : .res 1
 
-
-
+; Assembler stuff
+ASM_SRC_PTR : .res 2         
+ASM_LIST_PTR : .res 2
 
 
 .segment "RAM"
@@ -192,10 +193,14 @@ LAST_LOAD_PTR : .res 2
 LAST_BLK_NUM : .res 1
 
 ; assembler stuff
-ASM_CUR_LINE : .res 2        ; Current editing line number
+ASM_CUR_LINE : .res 2        ; Current editing line number 
+ASM_MODE : .res 1            ; assembler mode
+ASM_CMD_MODE := $01
+ASM_ED_MODE  := $02
+ASM_LIST_LINE : .res 2
 
 
 RAM_START = $0800
 
-SOURCE_START = $5000        ; Start of the assembler editor source
+SOURCE_START = $4000        ; Start of the assembler editor source
 
