@@ -1,0 +1,5 @@
+.include "defines.s"
+.include "shell.s"
+.include "reset.s"
+.include "kernel.s"
+.include "font.inc"
